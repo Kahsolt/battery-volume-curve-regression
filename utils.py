@@ -13,6 +13,8 @@ from torch.nn import Module as Model
 from torch import Tensor
 import numpy as np
 from numpy import ndarray
+import pandas as pd
+from pandas import DataFrame
 from tqdm import tqdm
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
