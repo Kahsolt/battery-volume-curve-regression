@@ -32,4 +32,7 @@ ACTION_STATUS = {
   '恒流转恒压充电': 1,
   '恒流放电': 2,
 }
+N_WIN = 5
+N_PREC = 3
+
 SEED = 114514
