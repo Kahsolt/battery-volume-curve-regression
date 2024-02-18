@@ -24,7 +24,8 @@ def run(args):
     fp = dp / f'{split}-{id}.txt'
     data = np.loadtxt(fp)
     nlen = len(data)
-    print(f'>> [{id}] expect: {EXPACTED_LENTH[id]}, got: {nlen}')
+    if nlen != EXPACTED_LENTH[id]:
+      print(f'>> [{id}] expect: {EXPACTED_LENTH[id]}, got: {nlen}')
 
     df = DataFrame()
     df['电池编号'] = [id] * nlen

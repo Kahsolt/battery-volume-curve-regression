@@ -11,7 +11,7 @@ def stats_single():
   for split, ids in DATA_FILES.items():
     for id in ids:
       df_cyc, df_act = load_data(split, id, rpad_test=True)
-      print(df_cyc)
+      #print(df_cyc)
       #print(df_act)
 
       y = df_cyc['y'].to_numpy()

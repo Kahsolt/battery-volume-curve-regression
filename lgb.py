@@ -2,6 +2,8 @@
 # Author: Armit
 # Create Time: 2024/02/17
 
+from traceback import print_exc
+
 import lightgbm as lgb
 from lightgbm import Booster
 from sklearn.model_selection import KFold
@@ -16,32 +18,25 @@ LOG_DP = LOG_PATH / 'lgb'
 
 def make_feat_df(split:str, id:str) -> Tuple[DataFrame, List[str], str]:
   df_cyc, df_act = load_data(split, id)
-  if 'fix case M005':   # M005 最后的 ts 均为 0
-    if id == 'M005':
-      df_act = df_act[~((df_act['aid']==6) & (df_act['act']==0))]
   y = df_cyc['y'].to_numpy().round(N_PREC)
   df_joined = df_cyc.merge(df_act, how='inner', on='cid').sort_values(by=['cid', 'aid'])
   ts = df_joined['ts'].to_numpy().round(N_PREC)
   try:
-    n_ratio = len(ts) / len(y)
-    if n_ratio == N_ACTION_CYCLE:
-      ts = ts.reshape(-1, N_ACTION_CYCLE)
-    elif n_ratio == 3:  # M003 的第二个静置的 ts = 0
-      ts = ts.reshape(-1, 3)
-      ts = np.pad(ts, [(0, 0), (0, 1)])
+    ts = ts.reshape(-1, N_ACTION_CYCLE)
     assert len(y) == len(ts)
   except Exception as e:
-    print(f'>> length mismatch: len(ts) / len(y) = {len(ts)} / {len(y)} = {n_ratio}')
+    print(f'>> length mismatch: len(ts) / len(y) = {len(ts)} / {len(y)} = {len(ts) / len(y)}')
     breakpoint()
     raise ValueError from e
-  nlen = len(y)
 
   X, Y = [], []
-  for i in range(N_WIN, nlen-1):
+  nlen = len(y)
+  for i in range(N_WIN, nlen):
+    # 当前步数 + 前5步容量 + 前5步容量差分 + 前五步充放电时长 -> 当前容量
     val = y[i-N_WIN:i]
     val_prime = val[1:] - val[:-1]
     acts = ts[i-N_WIN:i]
-    tgt = y[i+1]
+    tgt = y[i]
     X.append(np.concatenate([[i], val, val_prime, acts.flatten()], axis=0))
     Y.append(tgt)
   X = np.stack(X, axis=0)
@@ -148,7 +143,7 @@ def run_infer(model:Booster, split:str, id:str):
   y_true = df_cyc['y'].to_numpy()
   df_cyc, df_act = load_data(split, id, rpad_test=True)
   y_true_rpad = df_cyc['y'].to_numpy()
-  
+
   max_cid = df_cyc['cid'].max().item()
   len_y = len(y_true)
   if max_cid != len_y:
@@ -163,7 +158,7 @@ def run_infer(model:Booster, split:str, id:str):
     y_pred.append(y_true[i])
   v5 = y_pred[-N_WIN:]    # init state
   vp4 = [y - x for x, y in zip(v5[:-1], v5[1:])]
-  for k in tqdm(range(N_WIN, len(feat_df))):
+  for k in tqdm(range(len(feat_df))):
     cur = feat_df.iloc[k]
     for i in range(0, N_WIN):
       cur[f'v_{i+1}'] = v5[i]
@@ -215,5 +210,8 @@ if __name__ == '__main__':
     for id in ids:
       try:
         run_infer(model, split, id)
+      except KeyboardInterrupt:
+        exit(-1)
       except:
+        print_exc()
         print(f'>> failed: {split}-{id}')

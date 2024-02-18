@@ -47,16 +47,43 @@ def process_xlsx(wb:Workbook) -> List[DataFrame]:
     column_names = list(df.iloc[df.index[0]])
     df.drop(index=df.index[0], axis=0, inplace=True)  # ignore fist row for labels
     df.columns = column_names
+
+    # de-dup (do not know why)
+    df.drop_duplicates(inplace=True)
+
+    if 'fix case M008':
+      if df.loc[1, '循环号'] is None:
+        df.loc[1, '循环号'] = 0
+    df = df[~(df['循环号'] == '0')]     # ignore cid=0
+    df['循环号'] = df['循环号'].astype(np.uint32)
+    if '工步状态' in list(df.columns):
+      df = df[~(df['工步状态'] == '静置')]  # ignore all 静置
+
     if name == '循环数据':              # 一系列工步组成一个循环，记录该过程的放电容量
       assert not len(df_cycle)
-      df = df[~(df['循环号'] == '0')]   # ignore begining 静置
+
+      # dedup (use hidden truth data :)
+      cid_list = df['循环号'].to_numpy().tolist()
+      if len(cid_list) != len(set(cid_list)):
+        print('len(list(cid)):', len(cid_list))
+        print('len(set(cid)):', len(set(cid_list)))
+        rows = []
+        for cid, grp in df.groupby(by='循环号'):
+          if len(grp) == 1:
+            rows.append(grp)
+          elif len(grp) == 2:
+            grp_sel = grp[~grp['放电容量/Ah'].isna()]
+            assert len(grp_sel) == 1
+            rows.append(grp_sel)
+          else:
+            print('len(grp):', len(grp))
+            breakpoint()
+        df = pd.concat(rows, axis=0)
+
       df_cycle['cid'] = df['循环号'].astype(np.uint32)
       df_cycle['y']   = df['放电容量/Ah'].astype(np.float32).fillna(-1).round(3)  # fillna for testset
     elif name == '工步数据':            # 一系列时刻组成一个工步，对应单一的操作状态
       assert not len(df_action)
-      if 'fix case M008':
-        if df.loc[1, '循环号'] is None:
-          df.loc[1, '循环号'] = 0
       df_action['cid'] = df['循环号'].astype(np.uint32)
       df_action['aid'] = df['工步号'].astype(np.uint32)
       df_action['act'] = df['工步状态'].map(ACTION_STATUS).astype(np.uint8)
@@ -127,7 +154,10 @@ def process_cache():
       try:
         with zf.open(zinfo) as fh:
           wb = XlsxFile(fh, read_only=True, keep_vba=False, data_only=True)
-          data = process_xlsx(wb)
+          df_cycle, df_action = process_xlsx(wb)
+          print(df_cycle)
+          print(df_action)
+          data = df_cycle, df_action
         with open(fp_out, 'wb') as fh:
           pkl.dump(data, fh)
       except KeyboardInterrupt:

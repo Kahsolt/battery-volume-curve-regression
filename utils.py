@@ -25,8 +25,8 @@ IMG_PATH = BASE_PATH / 'img' ; IMG_PATH.mkdir(exist_ok=True)
 LOG_PATH = BASE_PATH / 'log' ; LOG_PATH.mkdir(exist_ok=True)
 SUBMIT_PATH = LOG_PATH / 'submit.csv'
 
-# 一个循环: 恒流转恒压充电 -> 静置 -> 恒流放电 -> 静置 (1-0-2-0)
-N_ACTION_CYCLE = 4
+# 一个循环: 恒流转恒压充电 -> [静置] -> 恒流放电 -> [静置] (1-0-2-0), 但忽略所有 静置-0
+N_ACTION_CYCLE = 2
 ACTION_STATUS = {
   '静置': 0,
   '恒流转恒压充电': 1,

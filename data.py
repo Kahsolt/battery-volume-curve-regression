@@ -41,14 +41,14 @@ def _smooth_y(df_cyc:DataFrame, id:str) -> ndarray:
       x[i] *= 10
   df_cyc['y'] = x
 
-  local_mean = lambda i: (x[i-1] + x[i+1]) / 2
+  local_mean = lambda x, i: (x[i-1] + x[i+1]) / 2
 
   # fix known abnormals
   if id == 'M012':
     x = df_cyc['y'].to_numpy()
     for i in range(len(x)):
       if 77.430 < x[i] < 77.450:  # 77.440
-        x[i] = local_mean(i)
+        x[i] = local_mean(x, i)
     df_cyc['y'] = x
   if id == 'M003':
     x = df_cyc['y'].to_numpy()
@@ -56,15 +56,15 @@ def _smooth_y(df_cyc:DataFrame, id:str) -> ndarray:
       if 1.048 < x[i] < 1.068:  # 1.058
         x[i] *= 100
       if 0.374 < x[i] < 0.394:  # 0.384
-        x[i] = local_mean(i)
+        x[i] = local_mean(x, i)
     df_cyc['y'] = x
 
   # mean filter for potential abnormals
   x = df_cyc['y'].to_numpy()
   for i in range(1, len(x)-1):
-    mean = local_mean(i)
+    mean = local_mean(x, i)
     diff = abs(x[i] - mean)
-    if diff > 1:    # MAGIC: better way?
+    if diff > 0.5:    # MAGIC: better way?
       x[i] = mean
   df_cyc['y'] = x
 
@@ -80,7 +80,20 @@ def _rpad_y(df_cyc:DataFrame) -> ndarray:
   return df_cyc
 
 def _log1p_ts(df_act:DataFrame) -> DataFrame:
+  # vrng renorm
   df_act['ts'] = np.log1p(df_act['ts'].to_numpy())
+
+  local_mean = lambda x, i: (x[i-1] + x[i+1]) / 2
+
+  # mean filter for potential abnormals
+  x = df_act['ts'].to_numpy()
+  for i in range(1, len(x)-1):
+    mean = local_mean(x, i)
+    diff = abs(x[i] - mean)
+    if diff > 0.5:    # MAGIC: better way?
+      x[i] = mean
+  df_act['ts'] = x
+
   return df_act
 
 
