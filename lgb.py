@@ -201,7 +201,7 @@ if __name__ == '__main__':
   LOG_DP.mkdir(exist_ok=True)
   model_fp = LOG_DP / 'model.txt'
 
-  if not Path(model_fp).exists():
+  if True or not Path(model_fp).exists():
     model = run_train()
     model.save_model(model_fp)
 
