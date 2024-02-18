@@ -16,6 +16,7 @@ from numpy import ndarray
 import pandas as pd
 from pandas import DataFrame
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 

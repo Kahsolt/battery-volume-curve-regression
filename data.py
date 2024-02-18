@@ -2,6 +2,8 @@
 # Author: Armit
 # Create Time: 2024/02/17
 
+from scipy.signal import medfilt
+
 from utils import *
 
 DATA_FILES = {
@@ -79,22 +81,105 @@ def _rpad_y(df_cyc:DataFrame) -> ndarray:
   df_cyc['y'] = x
   return df_cyc
 
-def _log1p_ts(df_act:DataFrame) -> DataFrame:
+def _smooth_ts(df_act:DataFrame, id:str) -> DataFrame:
+  # truncate known tailing abnormal
+  if id == 'M001':
+    df_act = df_act[df_act['cid'] != 906]
+
+  # now we focus on 'ts'
+  ts = df_act['ts'].to_numpy()
+  del df_act['ts']
+
+  # pad right-end missing data
+  if id == 'M005':
+    def right_end_repeat_pad(x:ndarray) -> ndarray:
+      # valid data
+      xlen = len(x)
+      i = 0
+      while x[i] > 0: i += 1
+      x_valid = x[:i]
+      # cyclic repeat segment
+      REP_LEN = 10        # MAGIC: I just counted it out manually :)
+      nlen_pad = xlen - len(x_valid)
+      npad_count = nlen_pad // REP_LEN
+      npad_reminder = nlen_pad % REP_LEN
+      x_rep = x_valid[-REP_LEN:].tolist()
+      # padded data
+      x_padded = np.concatenate([x_rep * npad_count, x_rep[:npad_reminder]], axis=0)
+      # use linear regression to manually decay the padded data
+      if 'LinearRegression':
+        from scipy.optimize import curve_fit
+        def func(x, k, b): return k * x + b
+
+        x_linear = x[500:1000]    # MAGIC: I juts observe that this range is a linear decay...
+        x_linear_medfilt = medfilt(x_linear, kernel_size=7)
+        xdata = list(range(500, 1000))
+        ydata = x_linear_medfilt
+        popt, pcov = curve_fit(func, xdata, ydata)
+        k, b = popt
+        for i in range(len(x_padded)):
+          x_padded[i] += k * (i + 1)
+      # concat up
+      x_refixed = np.concatenate([x_valid, x_padded], axis=0)
+      assert len(x_refixed) == xlen
+      return x_refixed
+
+    x_original = ts
+    x_even = right_end_repeat_pad(x_original[0::2])
+    x_odd  = right_end_repeat_pad(x_original[1::2])
+    x_refixed = np.empty_like(x_original)
+    x_refixed[0::2] = x_even
+    x_refixed[1::2] = x_odd
+    ts = x_refixed
+
+    if not 'plot':
+      plt.clf()
+      plt.subplot(211) ; plt.title('x_even') ; plt.plot(x_even)
+      plt.subplot(212) ; plt.title('x_odd')  ; plt.plot(x_odd)
+      plt.show()
+
+  # left-end-fix and median-filter
+  if 'smooth filter':
+    def left_end_extra_lerp(x:ndarray) -> ndarray:
+      from scipy.interpolate import interp1d
+      line = interp1d([1, 2, 3], x[1:4], kind='slinear', fill_value='extrapolate')
+      x[0] = line(0).item()
+      return x
+
+    x_original = ts
+    # unzip
+    x_even = x_original[0::2]
+    x_odd  = x_original[1::2]
+    # fix starting point abnormal
+    x_even = left_end_extra_lerp(x_even)
+    # fix single-point abnormal
+    x_smoothed = np.empty_like(x_original)
+    # zip
+    x_smoothed[0::2] = medfilt(x_even, kernel_size=5)
+    x_smoothed[1::2] = medfilt(x_odd,  kernel_size=5)
+
+    x_diff = np.abs(x_smoothed - x_original)
+    x_final = np.where(x_diff < 7.5 * 1000, x_original, x_smoothed)   # MAGIC: what's better
+    ts = x_final
+
+  if False:
+    plt.clf()
+    plt.subplot(211) ; plt.title('x_diff')  ; plt.plot(x_diff)
+    plt.subplot(212) ; plt.title('x_final') ; plt.plot(df_act['ts'])
+    plt.show()
+
   # vrng renorm
-  df_act['ts'] = np.log1p(df_act['ts'].to_numpy())
+  #ts = np.log1p(ts)
+  ts = ts / 1000
 
-  local_mean = lambda x, i: (x[i-1] + x[i+1]) / 2
+  # write back, avoid warning
+  df_act_new = DataFrame()
+  df_act_new['cid'] = df_act['cid']
+  df_act_new['aid'] = df_act['aid']
+  df_act_new['act'] = df_act['act']
+  df_act_new['ts'] = np.asarray(ts).astype(np.float32)
 
-  # mean filter for potential abnormals
-  x = df_act['ts'].to_numpy()
-  for i in range(1, len(x)-1):
-    mean = local_mean(x, i)
-    diff = abs(x[i] - mean)
-    if diff > 0.5:    # MAGIC: better way?
-      x[i] = mean
-  df_act['ts'] = x
-
-  return df_act
+  return df_act_new
 
 
 def load_data(split:str, id:str, rpad_test:bool=False) -> Tuple[DataFrame, DataFrame]:
@@ -105,5 +190,11 @@ def load_data(split:str, id:str, rpad_test:bool=False) -> Tuple[DataFrame, DataF
     df_cyc = _smooth_y(df_cyc, id)
   if rpad_test:
     df_cyc = _rpad_y(df_cyc)
-  df_act = _log1p_ts(df_act)
+  df_act = _smooth_ts(df_act, id)
   return df_cyc, df_act
+
+
+if __name__ == '__main__':
+  for split, ids in DATA_FILES.items():
+    for id in ids:
+      df_cyc, df_act = load_data(split, id)

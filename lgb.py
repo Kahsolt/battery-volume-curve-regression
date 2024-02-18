@@ -9,7 +9,6 @@ from lightgbm import Booster
 from sklearn.model_selection import KFold
 from sklearn.metrics import mean_absolute_error, r2_score, mean_absolute_percentage_error
 from scipy.signal import medfilt
-import matplotlib.pyplot as plt
 
 from data import *
 

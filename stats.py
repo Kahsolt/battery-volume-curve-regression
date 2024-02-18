@@ -2,8 +2,6 @@
 # Author: Armit
 # Create Time: 2024/02/14
 
-import matplotlib.pyplot as plt
-
 from data import *
 
 
@@ -20,6 +18,7 @@ def stats_single():
       plt.clf()
       plt.subplot(211) ; plt.plot(y,  label='y')  ; plt.legend() ; plt.title(f'{y[0]:.5f} -> {y[-1]:.5f}')
       plt.subplot(212) ; plt.plot(ts, label='ts') ; plt.legend()
+      plt.suptitle(f'{split}-{id}')
       plt.tight_layout()
       fp = IMG_PATH / f'{split}-{id}.png'
       print(f'>> savefig {fp}')

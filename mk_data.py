@@ -10,7 +10,6 @@ from traceback import print_exc
 import pandas as pd
 from pandas import DataFrame
 from openpyxl import open as XlsxFile, Workbook
-import matplotlib.pyplot as plt
 
 from utils import *
 
