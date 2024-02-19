@@ -12,6 +12,7 @@ from numpy import ndarray
 import pandas as pd
 from pandas import DataFrame
 from scipy.signal import medfilt
+from scipy.optimize import curve_fit
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
@@ -22,6 +23,13 @@ LOG_PATH = BASE_PATH / 'log' ; LOG_PATH.mkdir(exist_ok=True)
 SUBMIT_PATH = LOG_PATH / 'submit.csv'
 
 DATA_FILES = {
+  'test1': [
+    'M005',
+    'M007',
+    'M008',
+    'M011',
+    'M015',
+  ],
   'train': [
     'M001',
     'M003',
@@ -30,13 +38,6 @@ DATA_FILES = {
     'M013',
     'M016',
     'M019',
-  ],
-  'test1': [
-    'M005',
-    'M007',
-    'M008',
-    'M011',
-    'M015',
   ],
 }
 DATA_SPLIT_TYPE = {
@@ -134,7 +135,6 @@ def _smooth_ts(df_act:DataFrame, id:str) -> DataFrame:
       x_padded = np.concatenate([x_rep * npad_count, x_rep[:npad_reminder]], axis=0)
       # use linear regression to manually decay the padded data
       if 'LinearRegression':
-        from scipy.optimize import curve_fit
         def func(x, k, b): return k * x + b
 
         x_linear = x[500:1000]    # MAGIC: I juts observe that this range is a linear decay...

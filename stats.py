@@ -33,7 +33,6 @@ def savefig(ys:List[ndarray], lbls:List[str], fp:Path, title:str='', figsize:Tup
   plt.legend()
   plt.suptitle(title)
   plt.tight_layout()
-  fp = IMG_PATH / f'{title}.png'
   print(f'>> savefig {fp}')
   plt.savefig(fp, dpi=600)
 

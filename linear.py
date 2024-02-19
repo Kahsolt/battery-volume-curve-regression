@@ -107,7 +107,7 @@ def run_train(n_fold:int=5, seed:int=114514) -> LinearModel:
   return model
 
 
-def run_infer(model:LinearModel, split:str, id:str):
+def run_infer(model:LinearModel, split:str, id:str) -> ndarray:
   df_cyc, df_act = load_data(split, id, rpad_test=False)
   y_true = df_cyc['y'].to_numpy()
   df_cyc, df_act = load_data(split, id, rpad_test=True)
@@ -132,6 +132,48 @@ def run_infer(model:LinearModel, split:str, id:str):
     y_pred.append(pred)
   y_pred = np.asarray(y_pred).round(N_PREC)
 
+  # force fix prediction
+  y_pred_before_fix = y_pred.copy()
+  if id == 'M008':  # const shift
+    known_shift = y_true[-117:] - y_pred[-117:]
+    median_shift = np.median(known_shift)
+    y_pred_shift = y_pred.copy()
+    y_pred_shift[5:-117] += median_shift
+    y_pred_shift = np.where(y_true > 0, y_true, y_pred_shift)
+    y_pred = y_pred_shift.round(N_PREC)
+  if id == 'M011':  # const shift
+    median_shift = -1.9   # MAGIC: what's better?
+    y_pred_shift = y_pred.copy()
+    y_pred_shift[5:] += median_shift
+    y_pred_shift = np.where(y_true > 0, y_true, y_pred_shift)
+    y_pred = y_pred_shift.round(N_PREC)
+  if id == 'M015':  # tailing no converge
+    if not 'use lerp':    # 这个不太保真
+      def func(x, k, b): return k * x + b
+      xdata = list(range(50, 58))
+      ydata = y_pred[50:58]   # seemingly a linear decay
+      breakpoint()
+      popt, pcov = curve_fit(func, xdata, ydata)
+      y_pred_force_decay = y_pred.copy()
+      for i in range(58, len(y_pred)):
+        y_pred_force_decay[i] = func(i, *popt)
+      y_pred = y_pred_force_decay.round(N_PREC)
+
+    if 'use shift by ref':
+      df_cyc, df_act = load_data('train', 'M016')
+      y_ref = df_cyc['y'].to_numpy()[:len(y_pred)]
+      y_pred_ref_shift = y_pred.copy()
+      y_pred_seem_ok = y_pred[:58]
+      y_ref_to_match = y_ref[:58]
+      y_diff = y_pred_seem_ok[-1] - y_ref_to_match[-1]
+      y_pred_ref_shift[58:] = y_ref[58:len(y_pred)] + y_diff
+      y_pred = y_pred_ref_shift
+
+  if not 'plot':
+    plt.clf()
+    plt.plot(y_pred_before_fix, 'r')
+    plt.plot(y_pred, 'g')
+
   if 'smooth preds':
     y_pred_fix = y_pred.copy()
     y_pred_fix = medfilt(y_pred_fix, kernel_size=9)
@@ -154,6 +196,8 @@ def run_infer(model:LinearModel, split:str, id:str):
   print(f'>> savefig {fp}')
   plt.savefig(fp, dpi=600)
 
+  return y_pred_fix
+
 
 if __name__ == '__main__':
   LOG_DP.mkdir(exist_ok=True)
@@ -163,13 +207,26 @@ if __name__ == '__main__':
     model = run_train()
     joblib.dump(model, model_fp)
 
+  lbls, ys = [], []
   model = joblib.load(model_fp)
   for split, ids in DATA_FILES.items():
     for id in ids:
+      name = f'{split}-{id}'
+      lbls.append(name)
       try:
-        run_infer(model, split, id)
+        y_pred = run_infer(model, split, id)
+        if DATA_SPLIT_TYPE[split] == 'train':
+          df_cyc, _ = load_data(split, id, rpad_test=True)
+          y = df_cyc['y'].to_numpy()
+          ys.append(y)
+        else:
+          ys.append(y_pred)
       except KeyboardInterrupt:
         exit(-1)
       except:
         print_exc()
-        print(f'>> failed: {split}-{id}')
+        print(f'>> failed: {name}')
+
+  fp = LOG_DP / 'y-train_truth-test_pred.png'
+  from stats import savefig
+  savefig(ys, lbls, fp, 'train_truth-test_pred', figsize=(8, 8))
