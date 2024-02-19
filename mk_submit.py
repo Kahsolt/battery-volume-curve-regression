@@ -4,7 +4,7 @@
 
 from argparse import ArgumentParser
 
-from data import *
+from utils import *
 
 EXPACTED_LENTH = {
   'M005': 1646,

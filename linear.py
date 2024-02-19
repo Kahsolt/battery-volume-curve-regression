@@ -4,19 +4,17 @@
 
 # model the rough contour: c_i = f(charge_i, uncharge_i) + g(i) ≈ lowfreq(v_i)
 
-from traceback import print_exc
-
 import joblib
 from sklearn.linear_model import LinearRegression, Lasso, LassoLars
 from sklearn.linear_model._base import LinearModel
 from sklearn.model_selection import KFold
 from sklearn.metrics import mean_absolute_error, r2_score, mean_absolute_percentage_error
-from scipy.signal import medfilt
 
-from data import *
+from utils import *
 
 LOG_DP = LOG_PATH / 'linear'
 N_WIN = 5
+
 
 def make_feat_df(split:str, id:str) -> Tuple[DataFrame, List[str], str]:
   df_cyc, df_act = load_data(split, id)

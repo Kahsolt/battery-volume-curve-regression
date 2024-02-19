@@ -2,7 +2,7 @@
 # Author: Armit
 # Create Time: 2024/02/14
 
-from data import *
+from utils import *
 
 
 def stats_single():

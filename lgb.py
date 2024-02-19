@@ -2,15 +2,12 @@
 # Author: Armit
 # Create Time: 2024/02/17
 
-from traceback import print_exc
-
 import lightgbm as lgb
 from lightgbm import Booster
 from sklearn.model_selection import KFold
 from sklearn.metrics import mean_absolute_error, r2_score, mean_absolute_percentage_error
-from scipy.signal import medfilt
 
-from data import *
+from utils import *
 
 LOG_DP = LOG_PATH / 'lgb'
 
