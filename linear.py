@@ -132,26 +132,23 @@ def run_infer(model:LinearModel, split:str, id:str):
     y_pred.append(pred)
   y_pred = np.asarray(y_pred).round(N_PREC)
 
-  y_pred_fix = y_pred.copy()
-  y_pred_fix = medfilt(y_pred_fix, kernel_size=9)
-  for i in range(len(y_true)):
-    if y_true[i] > 0:
-      y_pred_fix[i] = y_true[i]
-  y_pred_fix = medfilt(y_pred_fix, kernel_size=5)
-  for i in range(len(y_true)):
-    if y_true[i] > 0:
-      y_pred_fix[i] = y_true[i]
+  if 'smooth preds':
+    y_pred_fix = y_pred.copy()
+    y_pred_fix = medfilt(y_pred_fix, kernel_size=9)
+    y_pred_fix = np.where(y_true > 0, y_true, y_pred_fix)
+    y_pred_fix = medfilt(y_pred_fix, kernel_size=5)
+    y_pred_fix = np.where(y_true > 0, y_true, y_pred_fix)
 
   name = f'{split}-{id}'
-
   fp = LOG_DP / f'{name}.txt'
   print(f'>> save preds to {fp}')
-  np.savetxt(fp, y_pred, fmt=f'%.{N_PREC}f')
+  np.savetxt(fp, y_pred_fix, fmt=f'%.{N_PREC}f')
 
   plt.clf()
-  plt.plot(y_true_rpad, 'b')
-  plt.plot(y_pred, 'r')
-  plt.plot(y_pred_fix, 'g')
+  plt.plot(y_true_rpad, 'b', label='truth')
+  plt.plot(y_pred,      'r', label='pred')
+  plt.plot(y_pred_fix,  'g', label='pred (filter)')
+  plt.legend()
   plt.suptitle(name)
   fp = LOG_DP / f'{name}.png'
   print(f'>> savefig {fp}')
@@ -162,7 +159,7 @@ if __name__ == '__main__':
   LOG_DP.mkdir(exist_ok=True)
   model_fp = LOG_DP / 'model.pkl'
 
-  if True or not Path(model_fp).exists():
+  if False or not Path(model_fp).exists():
     model = run_train()
     joblib.dump(model, model_fp)
 
