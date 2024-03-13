@@ -7,11 +7,19 @@ from argparse import ArgumentParser
 from utils import *
 
 EXPACTED_LENTH = {
+  # test1
   'M005': 1646,
   'M007': 431,
   'M008': 585,
   'M011': 592,
   'M015': 221,
+  # test2
+  'M009': 868,
+  'M010': 586,
+  'M014': 213,
+  'M017': 2016,
+  'M020': 3433,
+  'M021': 855,
 }
 
 
@@ -41,7 +49,7 @@ def run(args):
 if __name__ == '__main__':
   parser = ArgumentParser()
   args = parser.add_argument('-M', '--model', default='linear')
-  args = parser.add_argument('-D', '--split', default='test1')
+  args = parser.add_argument('-D', '--split', default='test2')
   args = parser.parse_args()
 
   run(args)

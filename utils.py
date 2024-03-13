@@ -23,6 +23,14 @@ LOG_PATH = BASE_PATH / 'log' ; LOG_PATH.mkdir(exist_ok=True)
 SUBMIT_PATH = LOG_PATH / 'submit.csv'
 
 DATA_FILES = {
+  'test2': [
+    'M009',
+    'M010',
+    'M014',
+    'M017',
+    'M020',
+    'M021',
+  ],
   'test1': [
     'M005',
     'M007',

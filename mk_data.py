@@ -2,17 +2,19 @@
 # Author: Armit
 # Create Time: 2024/02/14
 
-from zipfile import ZipFile
+from zipfile import ZipFile, ZipInfo
 from datetime import datetime, time
 
 from openpyxl import open as XlsxFile, Workbook
+from openpyxl.worksheet.worksheet import Worksheet
+from openpyxl.utils.dataframe import dataframe_to_rows
 
 from utils import *
 
 DATA_FILES = {
   'train.zip': 'train',
   'test1.zip': 'test',
-  'test2.zip': 'test',
+  #'test2.zip': 'test',
 }
 
 
@@ -161,6 +163,48 @@ def process_cache():
         print_exc()
 
 
+def process_cache_test2():
+  fn = 'test2.zip'
+  fp_in = DATA_PATH / fn
+  if not fp_in.exists(): return
+  dp_out = fp_in.with_suffix('')
+  dp_out.mkdir(exist_ok=True)
+
+  print(f'>> processing split {fn}...')
+  zf = ZipFile(fp_in, metadata_encoding='GBK')
+  zinfos = zf.infolist()
+  zfs: Dict[str, ZipInfo] = {Path(z.filename).name: z for z in zinfos}
+  ids = sorted({name.split('_')[0] for name in zfs})    # NOTE: 保持有序！
+  for id in tqdm(ids):
+    print(f'>> processing sample {id}...')
+    fp_out: Path = (dp_out / id).with_suffix('.pkl')
+    if fp_out.exists(): continue
+
+    wb = Workbook()
+    for sheet_name in ['工步数据', '循环数据', '详细数据']:
+      zinfo = zfs[f'{id}_{sheet_name}.csv']
+      with zf.open(zinfo) as fh:
+        sheet: Worksheet = wb.create_sheet(sheet_name)
+        df = pd.read_csv(fh)
+        for row in dataframe_to_rows(df, index=False, header=True):
+          sheet.append(row)
+    wb.remove(wb.worksheets[0])  # remove the default sheet
+
+    try:
+      df_cycle, df_action = process_xlsx(wb)
+      print(df_cycle)
+      print(df_action)
+      data = df_cycle, df_action
+      with open(fp_out, 'wb') as fh:
+        pkl.dump(data, fh)
+    except KeyboardInterrupt:
+      exit(-1)
+    except:
+      print_exc()
+
+
 if __name__ == '__main__':
   print('[process_cache]')
   process_cache()
+  print('[process_cache_test2]')
+  process_cache_test2()

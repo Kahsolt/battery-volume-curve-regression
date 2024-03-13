@@ -5,23 +5,15 @@
 ----
 
 Contest page: [https://www.industrial-bigdata.com/Challenge/title?competitionId=KNJDCW2HR45R8LCU6ZSUVCJRC5SJ3H1P&type=](https://www.industrial-bigdata.com/Challenge/title?competitionId=KNJDCW2HR45R8LCU6ZSUVCJRC5SJ3H1P&type=)  
+Problem provider：东方电气  
 Team Name: 帕鲁发电站  
 
 
 ### Quickstart
 
-⚪ install
-
 - `pip install -r requirements.txt`
+- `python linear.py`
 
-⚪ run
-
-- ???
-
-
-#### refenrence
-
-- ???
 
 ----
 by Armit
