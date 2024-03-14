@@ -290,6 +290,6 @@ if __name__ == '__main__':
         print_exc()
         print(f'>> failed: {name}')
 
-  from stats import savefig
+  from vis_stats import savefig
   fp = LOG_DP / 'y-train_truth-test_pred.png'
   savefig(ys, lbls, fp, 'train_truth-test_pred', figsize=(8, 8))

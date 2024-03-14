@@ -16,10 +16,15 @@ Team Name: 帕鲁发电站
 - `python linear_by_ref.py`
 - `python mk_submit.py`
 
+⚪ pred
+
 | original | prediction |
 | :-: | :-: |
 | ![original](img/y.png) | ![prediction](img/y-pred.png) |
 
+⚪ correlation
+
+![cor](img/cor.png)
 
 ----
 by Armit

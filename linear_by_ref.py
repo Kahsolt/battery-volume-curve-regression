@@ -64,6 +64,6 @@ if __name__ == '__main__':
         print_exc()
         print(f'>> failed: {name}')
 
-  from stats import savefig
+  from vis_stats import savefig
   fp = LOG_DP / 'y-pred.png'
   savefig(ys, lbls, fp, 'y-pred', figsize=(8, 8))
