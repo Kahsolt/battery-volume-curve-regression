@@ -48,7 +48,7 @@ def run(args):
 
 if __name__ == '__main__':
   parser = ArgumentParser()
-  args = parser.add_argument('-M', '--model', default='linear')
+  args = parser.add_argument('-M', '--model', default='linear_by_ref')
   args = parser.add_argument('-D', '--split', default='test2')
   args = parser.parse_args()
 
