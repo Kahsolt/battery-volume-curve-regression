@@ -174,12 +174,15 @@ def run_infer(model:LinearModel, split:str, id:str) -> ndarray:
     plt.plot(y_pred_before_fix, 'r')
     plt.plot(y_pred, 'g')
 
-  if 'smooth preds':
+  smooth = False
+  if 'smooth preds' and smooth:
     y_pred_fix = y_pred.copy()
     y_pred_fix = medfilt(y_pred_fix, kernel_size=9)
     y_pred_fix = np.where(y_true > 0, y_true, y_pred_fix)
     y_pred_fix = medfilt(y_pred_fix, kernel_size=5)
     y_pred_fix = np.where(y_true > 0, y_true, y_pred_fix)
+  else:
+    y_pred_fix = y_pred
 
   name = f'{split}-{id}'
   fp = LOG_DP / f'{name}.txt'
@@ -189,7 +192,7 @@ def run_infer(model:LinearModel, split:str, id:str) -> ndarray:
   plt.clf()
   plt.plot(y_true_rpad, 'b', label='truth')
   plt.plot(y_pred,      'r', label='pred')
-  plt.plot(y_pred_fix,  'g', label='pred (filter)')
+  if smooth: plt.plot(y_pred_fix,  'g', label='pred (filter)')
   plt.legend()
   plt.suptitle(name)
   fp = LOG_DP / f'{name}.png'
