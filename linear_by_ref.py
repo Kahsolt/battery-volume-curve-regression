@@ -32,8 +32,8 @@ if __name__ == '__main__':
     'M011': ['M019'],
     'M015': ['M016'],
     # test2
-    'M009': ['M006', 'M012', 'M013', 'M019'],
-    'M010': ['M006', 'M012', 'M013', 'M019'], 
+    'M009': ['M012', 'M013'],
+    'M010': ['M006', 'M012', 'M013'], 
     'M014': train_ids_all,  # TODO: 查看 test1-M015/M007 前半段
     'M017': ['M019'],   # 'M003'
     'M020': ['M019'],   # 'M003'
@@ -65,5 +65,5 @@ if __name__ == '__main__':
         print(f'>> failed: {name}')
 
   from stats import savefig
-  fp = LOG_DP / 'y-test2_pred.png'
-  savefig(ys, lbls, fp, 'test2_pred', figsize=(8, 8))
+  fp = LOG_DP / 'y-pred.png'
+  savefig(ys, lbls, fp, 'y-pred', figsize=(8, 8))

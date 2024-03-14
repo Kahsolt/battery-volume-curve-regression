@@ -8,14 +8,6 @@ Contest page: [https://www.industrial-bigdata.com/Challenge/title?competitionId=
 Problem provider：东方电气  
 Team Name: 帕鲁发电站  
 
-⚪ original
-
-![original](img/y.png)
-
-⚪ prediction
-
-![prediction](img/y-pred.png)
-
 
 ### Quickstart
 
@@ -23,6 +15,10 @@ Team Name: 帕鲁发电站
 - `python mk_data.py`
 - `python linear_by_ref.py`
 - `python mk_submit.py`
+
+| original | prediction |
+| :-: | :-: |
+| ![original](img/y.png) | ![prediction](img/y-pred.png) |
 
 
 ----

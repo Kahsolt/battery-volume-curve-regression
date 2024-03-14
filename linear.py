@@ -31,12 +31,13 @@ def make_feat_df(split:str, id:str) -> DataInfo:
     breakpoint()
     raise ValueError from e
 
-  use_id = False
+  use_id = True   # 修正递降率（使得末尾更近指数而非线性）
+  use_cur = True  # 修正预测偏移（否则看起来预测 offset+1 了）
   X, Y = [], []
   nlen = len(y)
   for i in range(N_WIN, nlen):
-    # log1p(当前步数) + 前5步充放电时长 -> 当前容量
-    acts = ts[i-N_WIN:i]
+    # log1p(当前步数) + 前5步(+当前)充放电时长 -> 当前容量
+    acts = ts[i-N_WIN:i+use_cur]
     tgt = y[i]
     X.append(np.concatenate([[np.log1p(i)] if use_id else [], acts.flatten()], axis=0))
     Y.append(tgt)
@@ -45,7 +46,7 @@ def make_feat_df(split:str, id:str) -> DataInfo:
   feat_names = ([
     'i'
   ] if use_id else []) + [
-    f'act_{i+1}_{j+1}' for i in range(N_WIN) for j in range(N_ACTION_CYCLE)
+    f'act_{i+1}_{j+1}' for i in range(N_WIN+use_cur) for j in range(N_ACTION_CYCLE)
   ]
   assert len(feat_names) == X.shape[-1], f'{len(feat_names)} != {X.shape[-1]}'
   target_name = 'target'
@@ -133,20 +134,24 @@ def run_infer(model:LinearModel, split:str, id:str, log_dp:Path=LOG_DP) -> ndarr
   # force fix prediction
   y_pred_before_fix = y_pred.copy()
 
+  def fix_const_shift(x:ndarray, shift:float) -> ndarray:
+    x_shift = x.copy()
+    x_shift[5:] += shift
+    return x_shift.round(N_PREC)
+
   ''' force fix: test1 '''
+  if id == 'M005':  # near perfect
+    pass
+  if id == 'M007':  # const shift
+    shift = np.median(y_true[345:385+1] - y_pred[345:385+1])
+    print('>> M007 shift:', shift)    # 0.8114990234375057
+    y_pred = fix_const_shift(y_pred, shift)
   if id == 'M008':  # const shift
-    known_shift = y_true[-117:] - y_pred[-117:]
-    median_shift = np.median(known_shift)
-    y_pred_shift = y_pred.copy()
-    y_pred_shift[5:-117] += median_shift
-    y_pred_shift = np.where(y_true > 0, y_true, y_pred_shift)
-    y_pred = y_pred_shift.round(N_PREC)
-  if id == 'M011':  # const shift
-    median_shift = -1.9   # MAGIC: what's better?
-    y_pred_shift = y_pred.copy()
-    y_pred_shift[5:] += median_shift
-    y_pred_shift = np.where(y_true > 0, y_true, y_pred_shift)
-    y_pred = y_pred_shift.round(N_PREC)
+    shift = np.median(y_true[-117:] - y_pred[-117:])
+    print('>> M008 shift:', shift)    # -1.409001770019529
+    y_pred = fix_const_shift(y_pred, shift)
+  if id == 'M011':  # near perfect
+    pass
   if id == 'M015':  # tailing no converge
     if not 'use lerp':    # 这个不太保真
       def func(x, k, b): return k * x + b
@@ -171,17 +176,40 @@ def run_infer(model:LinearModel, split:str, id:str, log_dp:Path=LOG_DP) -> ndarr
 
   ''' force fix: test2 '''
   if id == 'M009':  # const shift
-    pass
-  if id == 'M010':  # const shift
+    y_pred = fix_const_shift(y_pred, -2.1)
+  if id == 'M010':  # near perfect
     pass
   if id == 'M014':  # tailing no converge
     y_pred_stable = y_pred[:170]
     y_pred_unstable = y_pred[170:]
     y_pred = np.concatenate([y_pred_stable, np.ones_like(y_pred_unstable) * y_pred_stable[-1]])
+
+    if 'interp':
+      def func(x, a, b, c): return a ** (x - b) + c
+      y_pred_loglike_parts = [
+        (34, 134+1),
+        (155, 170+1),
+      ]
+      xdata = []
+      for rng in y_pred_loglike_parts: xdata.extend(list(range(*rng)))
+      ydata = []
+      for rng in y_pred_loglike_parts: ydata.extend(y_pred[slice(*rng)].tolist())
+      popt, pcov = curve_fit(func, xdata, ydata, p0=[0.98556045, 156.60327162, 103.50732646])
+      print('>> popt:', popt)
+
+    y_pred_abnormal_parts = [
+      (135, 155),
+      (170, len(y_pred)),
+    ]
+    y_pred_fix = y_pred.copy()
+    for rng in y_pred_abnormal_parts:
+      for i in range(*rng):
+        y_pred_fix[i] = func(i, *popt)
+    y_pred = y_pred_fix.round(N_PREC)
   if id == 'M017':  # const shift
-    pass
-  if id == 'M020':  # near perfect
-    pass
+    y_pred = fix_const_shift(y_pred, -0.15)
+  if id == 'M020':  # const shift
+    y_pred = fix_const_shift(y_pred, +1)
   if id == 'M021':  # near perfect
     pass
 
@@ -191,8 +219,6 @@ def run_infer(model:LinearModel, split:str, id:str, log_dp:Path=LOG_DP) -> ndarr
     plt.plot(y_pred, 'g')
     plt.show()
     plt.close()
-
-  #if id in ['M009', 'M010', 'M014', 'M017', 'M020', 'M021']: breakpoint()
 
   smooth = False
   if 'smooth preds' and smooth:
